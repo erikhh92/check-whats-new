@@ -1,2 +1,4 @@
 requests
 pypdf
+bs4
+dotenv
