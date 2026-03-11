@@ -1,4 +1,4 @@
 requests
 pypdf
-bs4
-dotenv
+beautifulsoup4
+python-dotenv
