@@ -2,6 +2,7 @@ import requests
 import io
 import os
 import json
+import unicodedata
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -52,11 +53,11 @@ def scrappe_pdf(content):
             reader = PdfReader(f)
             text = "".join(page.extract_text() for page in reader.pages).lower()
             
-            found = [word for word in keywords_array if word.lower() in text]
-            
-            if found:
+            found_keywords = search_keywords(text)
+
+            if found_keywords:
                 print(f"Found entry while scrapping PDF")
-                message = f"🎯 Found! The PDF contains: {', '.join(found)}"
+                message = f"🎯 Found! The PDF contains: {', '.join(found_keywords)}"
                 save_message(message)
     except Exception as e:
         print(f"Error while scrapping PDF: {e}")
@@ -74,11 +75,11 @@ def scrappe_html(content):
 
             text = body.get_text()
 
-            found = [word for word in keywords_array if word.lower() in text]
+            found_keywords = search_keywords(text)
 
-            if found:
+            if found_keywords:
                 print(f"Found entry while scrapping HTML")
-                message = f"🎯 Found! The HTML contains:: {', '.join(found)}"
+                message = f"🎯 Found! The HTML contains:: {', '.join(found_keywords)}"
                 save_message(message)
     except Exception as e:
         print(f"Error while scrapping HTML: {e}")
@@ -87,11 +88,11 @@ def scrappe_json(content):
     try:
         text = json.dumps(content, ensure_ascii=False)
 
-        found = [word for word in keywords_array if word.lower() in text]
+        found_keywords = search_keywords(text)
 
-        if found:
+        if found_keywords:
             print(f"Found entry while scrapping JSON")
-            message = f"🎯 Found! The JSON contains: {', '.join(found)}"
+            message = f"🎯 Found! The JSON contains:: {', '.join(found_keywords)}"
             save_message(message)
     except Exception as e:
         print(f"Error while scrapping JSON: {e}")
@@ -155,6 +156,29 @@ def send_notifications():
             send_terminal_notifications()
     except Exception as e:
         print(f"Error sending the notifications: {e}")
+
+def search_keywords(text):
+    clean_text = normalize_text(text)
+
+    found = []
+
+    for keyword in keywords_array:
+        clean_keyword = normalize_text(keyword)
+
+        if clean_keyword in clean_text:
+            found.append(keyword)
+    
+    return found
+
+def normalize_text(text):
+    if not text:
+        return ""
+    
+    nfd_text = unicodedata.normalize("NFD", text)
+
+    text_without_symbols = "".join(c for c in nfd_text if unicodedata.category(c) != "Mn" or c == '\u0303')
+
+    return text_without_symbols.lower()
 
 if __name__ == "__main__":
     try:

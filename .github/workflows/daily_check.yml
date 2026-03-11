@@ -3,29 +3,23 @@ name: Check what's new
 on:
   schedule:
     - cron: '0 8 * * *'
-  workflow_dispatch: # Esto permite que puedas darle al botón "Run" manualmente
-
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
-
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Ejecutar el monitor
         env:
-          # Aquí mapeamos los secretos de GitHub a variables de entorno
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           URLS: ${{ secrets.URLS }}
