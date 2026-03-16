@@ -14,13 +14,14 @@ load_dotenv()
 
 # Configuración
 TOKEN = os.getenv('TELEGRAM_TOKEN')
-CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+CHAT_IDS = os.getenv('TELEGRAM_CHAT_IDS')
 URLS = os.getenv('URLS')
 KEYWORDS = os.getenv('KEYWORDS')
 ENV = os.getenv('ENV')
 
 url_array = []
 keywords_array = []
+chat_id_array = []
 message_list = []
 offers = []
 filtered_offers = []
@@ -106,9 +107,10 @@ def check_urls():
         print(f"Error checking the URLs: {e}")
 
 def set_configuration():
-    global url_array, keywords_array
+    global url_array, keywords_array, chat_id_array
     try:
         url_array = URLS.split(';')
+        chat_id_array = CHAT_IDS.split(';')
         keywords_array = KEYWORDS.split(';')
     except Exception as e:
         print(f"Error setting the configuration: {e}")
@@ -133,10 +135,11 @@ def send_notification(msg):
 
 def send_telegram_notification(message):
     try:
-        requests.post(
-            url=f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={"chat_id": CHAT_ID, "text": message, "parse_mode": "HTML"}
-        )
+        for chat_id in chat_id_array:
+            requests.post(
+                url=f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                data={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+            )
     except Exception as e:
         print(f"Error sending Telegram notifications: {e}")
 
