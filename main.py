@@ -13,8 +13,8 @@ from models import Offer
 load_dotenv()
 
 # Configuración
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-CHAT_IDS = os.getenv('TELEGRAM_CHAT_IDS')
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_TOKEN_CHAT_IDS = os.getenv('TELEGRAM_CHAT_IDS')
 URLS = os.getenv('URLS')
 KEYWORDS = os.getenv('KEYWORDS')
 ENV = os.getenv('ENV')
@@ -110,7 +110,7 @@ def set_configuration():
     global url_array, keywords_array, chat_id_array
     try:
         url_array = URLS.split(';')
-        chat_id_array = CHAT_IDS.split(';')
+        chat_id_array = TELEGRAM_TOKEN_CHAT_IDS.split(';')
         keywords_array = KEYWORDS.split(';')
     except Exception as e:
         print(f"Error setting the configuration: {e}")
@@ -137,7 +137,7 @@ def send_telegram_notification(message):
     try:
         for chat_id in chat_id_array:
             requests.post(
-                url=f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                url=f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
                 data={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
             )
     except Exception as e:
