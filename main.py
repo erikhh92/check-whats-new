@@ -1,11 +1,14 @@
 import requests
 import io
 import os
-import json
 import unicodedata
+import re
+import logging
+
 from pypdf import PdfReader
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+
+from models import Offer
 
 load_dotenv()
 
@@ -19,6 +22,8 @@ ENV = os.getenv('ENV')
 url_array = []
 keywords_array = []
 message_list = []
+offers = []
+filtered_offers = []
 
 def check_url(target):
     try:
@@ -37,8 +42,6 @@ def scrappe_content(response: requests.Response):
 
         if "application/pdf" in content_type:
             scrappe_pdf(response.content)
-        elif "text/html" in content_type:
-            scrappe_html(response.text)
         elif "application/json" in content_type:
             scrappe_json(response.json())
         else:
@@ -48,52 +51,50 @@ def scrappe_content(response: requests.Response):
         print(f"Error while scrapping content: {e}")
 
 def scrappe_pdf(content):
+    global offers
     try:
+        text_lines = []
+
         with io.BytesIO(content) as f:
             reader = PdfReader(f)
-            text = "".join(page.extract_text() for page in reader.pages).lower()
-            
-            found_keywords = search_keywords(text)
 
-            if found_keywords:
-                print(f"Found entry while scrapping PDF")
-                message = f"🎯 Found! The PDF contains: {', '.join(found_keywords)}"
-                save_message(message)
+            for page in reader.pages:
+                page_text = page.extract_text(extraction_mode="layout")
+                page_lines = page_text.splitlines()
+                
+                for line in page_lines:
+                    if line.strip() and not line.isspace():
+                        text_lines.append(line)
+
+        for x, line in enumerate(text_lines):
+            if "dades de la placa" in normalize_text(line):
+                properties = []
+
+                properties.extend(separate_columns(text_lines[x+2]))
+                properties.extend(separate_columns(text_lines[x+4]))
+                properties.extend(separate_columns(text_lines[x+6]))
+                properties.extend(separate_columns(text_lines[x+8]))
+                
+                new_offer = Offer(*properties)
+                offers.append(new_offer)
     except Exception as e:
         print(f"Error while scrapping PDF: {e}")
-
-
-def scrappe_html(content):
-    try:
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        body = soup.find("body")
-
-        if body:
-            for trash in body(["script", "style", "nav", "footer", "header"]):
-                trash.decompose()
-
-            text = body.get_text()
-
-            found_keywords = search_keywords(text)
-
-            if found_keywords:
-                print(f"Found entry while scrapping HTML")
-                message = f"🎯 Found! The HTML contains:: {', '.join(found_keywords)}"
-                save_message(message)
-    except Exception as e:
-        print(f"Error while scrapping HTML: {e}")
     
-def scrappe_json(content):
+def scrappe_json(json_string):
+    global offers
     try:
-        text = json.dumps(content, ensure_ascii=False)
+        for item in json_string:
+            new_offer = Offer(
+                identifier=item.get("CODI", None),
+                speciality=item.get("PERFIL", None),
+                application=item.get("INFO_TERMINI", None),
+                centerName=item.get("CENTRE") or item.get("CENTRE_ALTRES") or None,
+                city="BARCELONA",
+                startDate=item.get("INCORPORACIO", None),
+                endDate=item.get("INFO_TERMINI", None)
+            )
 
-        found_keywords = search_keywords(text)
-
-        if found_keywords:
-            print(f"Found entry while scrapping JSON")
-            message = f"🎯 Found! The JSON contains:: {', '.join(found_keywords)}"
-            save_message(message)
+            offers.append(new_offer)
     except Exception as e:
         print(f"Error while scrapping JSON: {e}")
     
@@ -130,30 +131,84 @@ def send_notification(msg):
     except Exception as e:
         print(f"Error sending a notification {msg}: {e}")
 
-def send_telegram_notifications():
+def send_telegram_notification(message):
     try:
-        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-
-        for message in message_list:
-            requests.post(url, data={"chat_id": CHAT_ID, "text": message})
+        requests.post(
+            url=f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            data={"chat_id": CHAT_ID, "text": message, "parse_mode": "HTML"}
+        )
     except Exception as e:
         print(f"Error sending Telegram notifications: {e}")
 
-def send_terminal_notifications():
+def send_terminal_notification(message):
     try:
-        for message in message_list:
-            print(f"{message}")
+        print(f"{message}")
     except Exception as e:
         print(f"Error sending terminal notifications: {e}")
 
+def filter_offers():
+    global filtered_offers
+    try:
+        normalized_keywords = [normalize_text(k) for k in keywords_array]
+
+        filtered_offers = list(filter(lambda o: valid_offer(o, normalized_keywords), offers))
+    except Exception as e:
+        print(f"Error filtering offers: {e}") 
+
+def valid_offer(offer: Offer, keywords: list[str]) -> bool:
+    try:
+        if not offer.speciality:
+            return False
+        
+        normalized_speciality = normalize_text(offer.speciality)
+
+        return any(kw.lower() in normalized_speciality for kw in keywords)
+    except Exception as e:
+        print(f"Error validating offer: {e}") 
+
+def prepare_messages():
+    global message_list
+    try:
+        for offer in filtered_offers:
+            parts = [f"🚀 <b>Nueva oferta encontrada</b>\n"]
+
+            message_fields = [
+                ("Identificador", offer.identifier),
+                ("Especialidad", offer.speciality),
+                ("Aplicación", offer.application),
+                ("Nombre", offer.centerName),
+                ("Dirección", offer.address),
+                ("Municipio", offer.city),
+                ("Teléfono", offer.telephone),
+                ("Jornada", offer.time),
+                ("Inicio", offer.startDate),
+                ("Fin", offer.endDate)
+            ]
+
+            for tag, value in message_fields:
+                if value:
+                    parts.append(f"<b>{tag}:</b> {value}")
+
+            if(len(parts) > 1):
+                final_message = "\n".join(parts)
+                message_list.append(final_message)
+    except Exception as e:
+        print(f"Error preparing the messages: {e}") 
+
 def send_notifications():
     try:
-        if ENV and ENV != "local":
+        local = ENV and ENV != "local"
+
+        if(local):
             print(f"Sending notifications through Telegram...")
-            send_telegram_notifications()
         else:
             print(f"Sending notifications through terminal output...")
-            send_terminal_notifications()
+
+        for message in message_list:
+            if local:
+                send_telegram_notification(message)
+            else:
+                send_terminal_notification(message)
     except Exception as e:
         print(f"Error sending the notifications: {e}")
 
@@ -180,10 +235,18 @@ def normalize_text(text):
 
     return text_without_symbols.lower()
 
+def separate_columns(line):
+    return [block.strip() for block in re.split(r'\s{2,}', line) if block.strip()]
+
 if __name__ == "__main__":
     try:
+        logger = logging.getLogger("pypdf")
+        logger.setLevel(logging.ERROR)
+
         set_configuration()
         check_urls()
+        filter_offers()
+        prepare_messages()
         send_notifications()
     except Exception as e:
         print(e)
