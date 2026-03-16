@@ -1,5 +1,5 @@
 class Offer:
-    def __init__(self, identifier=None, date=None, speciality=None, application=None, centerName=None, address=None, city=None, telephone=None, time=None, startDate=None, endDate=None):
+    def __init__(self, identifier=None, speciality=None, application=None, centerName=None, address=None, city=None, telephone=None, time=None, startDate=None, endDate=None, date=None):
         self.identifier = identifier
         self.date = date
         self.speciality = speciality

@@ -77,6 +77,7 @@ def scrappe_pdf(content):
                 properties.extend(separate_columns(text_lines[x+8]))
                 
                 new_offer = Offer(*properties)
+                
                 offers.append(new_offer)
     except Exception as e:
         print(f"Error while scrapping PDF: {e}")
