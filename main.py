@@ -77,7 +77,7 @@ def scrappe_pdf(content):
                 properties.extend(separate_columns(text_lines[x+8]))
                 
                 new_offer = Offer(*properties)
-                
+
                 offers.append(new_offer)
     except Exception as e:
         print(f"Error while scrapping PDF: {e}")
@@ -166,7 +166,7 @@ def valid_offer(offer: Offer, keywords: list[str]) -> bool:
         
         normalized_speciality = normalize_text(offer.speciality)
 
-        return any(kw.lower() in normalized_speciality for kw in keywords)
+        return any(kw in normalized_speciality for kw in keywords)
     except Exception as e:
         print(f"Error validating offer: {e}") 
 
@@ -231,14 +231,22 @@ def search_keywords(text):
     return found
 
 def normalize_text(text):
-    if not text:
-        return ""
+    base_text = ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    ).replace("-", " ").replace("_", " ").replace("(", " ").replace(")", " ").replace("/", " ")
+
+    words = base_text.split()
+
+    pieces = []
     
-    nfd_text = unicodedata.normalize("NFD", text)
-
-    text_without_symbols = "".join(c for c in nfd_text if unicodedata.category(c) != "Mn" or c == '\u0303')
-
-    return text_without_symbols.lower()
+    for word in words:
+        if word.isupper():
+            pieces.append(word)
+        else:
+            pieces.append(word.lower())
+    
+    return " ".join(pieces)
 
 def separate_columns(line):
     return [block.strip() for block in re.split(r'\s{2,}', line) if block.strip()]
