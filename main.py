@@ -91,7 +91,7 @@ def scrappe_json(json_string):
                 speciality=item.get("PERFIL", None),
                 application=item.get("INFO_TERMINI", None),
                 centerName=item.get("CENTRE") or item.get("CENTRE_ALTRES") or None,
-                city="BARCELONA",
+                city="Barcelona",
                 startDate=item.get("INCORPORACIO", None)
             )
 
@@ -179,7 +179,7 @@ def prepare_messages():
                 ("Identificador", offer.identifier),
                 ("Fecha publicacion", offer.date),
                 ("Especialidad", offer.speciality),
-                ("Aplicación", offer.application),
+                ("Plazo", offer.application),
                 ("Nombre", offer.centerName),
                 ("Dirección", offer.address),
                 ("Municipio", offer.city),
