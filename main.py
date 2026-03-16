@@ -87,12 +87,12 @@ def scrappe_json(json_string):
         for item in json_string:
             new_offer = Offer(
                 identifier=item.get("CODI", None),
+                date=item.get("DATA", None),
                 speciality=item.get("PERFIL", None),
                 application=item.get("INFO_TERMINI", None),
                 centerName=item.get("CENTRE") or item.get("CENTRE_ALTRES") or None,
                 city="BARCELONA",
-                startDate=item.get("INCORPORACIO", None),
-                endDate=item.get("INFO_TERMINI", None)
+                startDate=item.get("INCORPORACIO", None)
             )
 
             offers.append(new_offer)
@@ -177,6 +177,7 @@ def prepare_messages():
 
             message_fields = [
                 ("Identificador", offer.identifier),
+                ("Fecha publicacion", offer.date),
                 ("Especialidad", offer.speciality),
                 ("Aplicación", offer.application),
                 ("Nombre", offer.centerName),
@@ -184,7 +185,7 @@ def prepare_messages():
                 ("Municipio", offer.city),
                 ("Teléfono", offer.telephone),
                 ("Jornada", offer.time),
-                ("Inicio", offer.startDate),
+                ("Incorporación", offer.startDate),
                 ("Fin", offer.endDate)
             ]
 
